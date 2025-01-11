@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Uzay Savaşı</title>
+    <style>
+        * {
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            -khtml-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+        
+        body {
+            margin: 0;
+            overflow: hidden;
+            touch-action: none;
+            background: black;
+            font-family: Arial, sans-serif;
+            position: fixed;
+            width: 100%;
+            height: 100%;
+        }
+        #kahraman {
+            width: 50px;
+            height: 50px;
+            position: absolute;
+            bottom: 50px;
+            transition: left 0.1s ease;
+            display: none;
+        }
+        #kahraman svg {
+            width: 100%;
+            height: 100%;
+            filter: drop-shadow(0 0 5px #fff);
+        }
+        .mermi {
+            width: 15px;
+            height: 15px;
+            background: orange;
+            border-radius: 50%;
+            position: absolute;
+            filter: brightness(1.5);
+            box-shadow: 0 0 10px orange;
+        }
+        .dusmanContainer {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+        }
+        .dusman {
+            width: 0;
+            height: 0;
+            border-left: 25px solid transparent;
+            border-right: 25px solid transparent;
+            border-bottom: 50px solid red;
+            position: absolute;
+            bottom: 0;
+        }
+        .dusmanMermisi {
+            width: 10px;
+            height: 10px;
+            background: red;
+            position: absolute;
+            border-radius: 50%;
+            box-shadow: 0 0 5px red;
+        }
+        .canBari {
+            width: 50px;
+            height: 5px;
+            background: #333;
+            position: absolute;
+            top: -10px;
+        }
+        .canBariFill {
+            width: 100%;
+            height: 100%;
+            background: lime;
+            transition: width 0.3s;
+        }
+        #kahramanCanContainer {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            width: 300px;
+            height: 30px;
+            background: #333;
+            border: 3px solid #666;
+            border-radius: 15px;
+            overflow: hidden;
+            display: none;
+        }
+        #kahramanCanFill {
+            width: 100%;
+            height: 100%;
+            background: lime;
+            transition: all 0.3s;
+        }
+        #gameOver, #startScreen, #nameScreen {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 48px;
+            text-align: center;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 40px;
+            border-radius: 20px;
+            z-index: 1000;
+        }
+        #gameOver, #nameScreen {
+            display: none;
+        }
+        .button {
+            display: inline-block;
+            padding: 15px 30px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 24px;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: background 0.3s;
+        }
+        .button:hover {
+            background: #45a049;
+        }
+        #playerName {
+            padding: 10px;
+            font-size: 24px;
+            margin: 20px 0;
+            width: 80%;
+            text-align: center;
+            border-radius: 5px;
+            border: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="kahraman">
+        <svg viewBox="0 0 100 100">
+            <path fill="white" d="M50 0 L100 100 L50 80 L0 100 Z"/>
+        </svg>
+    </div>
+    <div id="kahramanCanContainer">
+        <div id="kahramanCanFill"></div>
+    </div>
+    <div id="startScreen">
+        UZAY SAVAŞI
+        <br>
+        <button class="button" onclick="isimEkraniGoster()">BAŞLAT</button>
+    </div>
+    <div id="nameScreen">
+        Adınızı Girin:
+        <br>
+        <input type="text" id="playerName" maxlength="20">
+        <br>
+        <button class="button" onclick="oyunuBaslat()">OYNA</button>
+    </div>
+    <div id="gameOver">
+        OYUN BİTTİ!
+        <br>
+        <span id="gameOverText"></span>
+        <br>
+        <span style="font-size: 24px; color: yellow;">Bektaşı aramayı unutma :)</span>
+        <br>
+        <button class="button" onclick="yenidenBaslat()">TEKRAR OYNA</button>
+    </div>
+    <script>
+        let playerName = '';
+        const kahraman = document.getElementById('kahraman');
+        const canFill = document.getElementById('kahramanCanFill');
+        let kahramanCan = 20;
+        let oyunDevam = false;
+        let atesEdiyor = false;
+        let atesInterval = null;
+
+        // Mobil tarayıcılarda yeniden yükleme sorununu önleme
+        window.addEventListener('load', function() {
+            setTimeout(function() {
+                window.scrollTo(0, 1);
+            }, 0);
+        });
+
+        // Ekran döndürme olayını engelleme
+        screen.orientation?.lock('portrait').catch(() => {});
+
+        function isimEkraniGoster() {
+            document.getElementById('startScreen').style.display = 'none';
+            document.getElementById('nameScreen').style.display = 'block';
+        }
+
+        function oyunuBaslat() {
+            playerName = document.getElementById('playerName').value.trim();
+            if (!playerName) {
+                alert('Lütfen adınızı girin!');
+                return;
+            }
+            document.getElementById('nameScreen').style.display = 'none';
+            document.getElementById('kahraman').style.display = 'block';
+            document.getElementById('kahramanCanContainer').style.display = 'block';
+            oyunDevam = true;
+            kahramanCan = 20;
+            canGuncelle();
+        }
+
+        function yenidenBaslat() {
+            document.getElementById('gameOver').style.display = 'none';
+            isimEkraniGoster();
+        }
+        
+        function boyutAyarla() {
+            kahraman.style.left = (window.innerWidth / 2 - 25) + 'px';
+        }
+        
+        boyutAyarla();
+        window.addEventListener('resize', boyutAyarla);
+
+        let kahramanX = window.innerWidth / 2 - 25;
+
+        // Mouse ve dokunmatik olayları birleştirme
+        function handleStart(e) {
+            if (!oyunDevam) return;
+            e.preventDefault();
+            const touch = e.touches ? e.touches[0] : e;
+            kahramanX = touch.clientX - 25;
+            if (kahramanX < 0) kahramanX = 0;
+            if (kahramanX > window.innerWidth - 50) kahramanX = window.innerWidth - 50;
+            kahraman.style.left = kahramanX + 'px';
+            atesEdiyor = true;
+            atesEtmeyiBaslat();
+        }
+
+        function handleMove(e) {
+            if (!oyunDevam) return;
+            e.preventDefault();
+            const touch = e.touches ? e.touches[0] : e;
+            kahramanX = touch.clientX - 25;
+            if (kahramanX < 0) kahramanX = 0;
+            if (kahramanX > window.innerWidth - 50) kahramanX = window.innerWidth - 50;
+            kahraman.style.left = kahramanX + 'px';
+        }
+
+        function handleEnd(e) {
+            if (!oyunDevam) return;
+            e.preventDefault();
+            atesEdiyor = false;
+            clearInterval(atesInterval);
+        }
+
+        // Mouse olayları
+        document.addEventListener('mousedown', handleStart);
+        document.addEventListener('mousemove', handleMove);
+        document.addEventListener('mouseup', handleEnd);
+        document.addEventListener('mouseleave', handleEnd);
+
+        // Dokunmatik olaylar
+        document.addEventListener('touchstart', handleStart, {passive: false});
+        document.addEventListener('touchmove', handleMove, {passive: false});
+        document.addEventListener('touchend', handleEnd, {passive: false});
+        document.addEventListener('touchcancel', handleEnd, {passive: false});
+
+        function carpismaKontrol(rect1, rect2) {
+            return !(rect1.right < rect2.left || 
+                    rect1.left > rect2.right || 
+                    rect1.bottom < rect2.top || 
+                    rect1.top > rect2.bottom);
+        }
+
+        function canGuncelle() {
+            const canYuzde = (kahramanCan / 20) * 100;
+            canFill.style.width = canYuzde + '%';
+            
+            const kirmizi = Math.floor(255 * (1 - canYuzde / 100));
+            const yesil = Math.floor(255 * (canYuzde / 100));
+            canFill.style.background = `rgb(${kirmizi}, ${yesil}, 0)`;
+            
+            if (kahramanCan <= 0) {
+                oyunBitti();
+            }
+        }
+
+        function oyunBitti() {
+            oyunDevam = false;
+            document.getElementById('gameOverText').textContent = `${playerName} Kaybettin!`;
+            document.getElementById('gameOver').style.display = 'block';
+            document.getElementById('kahraman').style.display = 'none';
+            document.getElementById('kahramanCanContainer').style.display = 'none';
+            clearInterval(atesInterval);
+            document.querySelectorAll('.dusmanContainer').forEach(dusman => {
+                clearInterval(dusman.hareketInterval);
+                dusman.remove();
+            });
+        }
+
+        function mermiOlustur() {
+            if (!oyunDevam) return;
+
+            const mermi = document.createElement('div');
+            mermi.className = 'mermi';
+            mermi.style.left = (kahramanX + 17.5) + 'px';
+            mermi.style.bottom = '100px';
+            document.body.appendChild(mermi);
+
+            let mermiY = 100;
+            const hiz = 10;
+            
+            const mermiHareket = setInterval(() => {
+                if (!oyunDevam) {
+                    clearInterval(mermiHareket);
+                    mermi.remove();
+                    return;
+                }
+
+                mermiY += hiz;
+                mermi.style.bottom = mermiY + 'px';
+
+                const mermiRect = mermi.getBoundingClientRect();
+                document.querySelectorAll('.dusmanContainer').forEach(dusmanContainer => {
+                    const dusmanRect = dusmanContainer.getBoundingClientRect();
+                    if (carpismaKontrol(mermiRect, dusmanRect)) {
+                        mermi.remove();
+                        clearInterval(mermiHareket);
+                        
+                        const can = parseInt(dusmanContainer.getAttribute('data-can'));
+                        const yeniCan = can - 1;
+                        dusmanContainer.setAttribute('data-can', yeniCan);
+                        
+                        const canBariFill = dusmanContainer.querySelector('.canBariFill');
+                        canBariFill.style.width = (yeniCan / 3 * 100) + '%';
+                        
+                        if (yeniCan <= 0) {
+                            clearInterval(dusmanContainer.hareketInterval);
+                            dusmanContainer.remove();
+                        }
+                    }
+                });
+
+                if (mermiY > window.innerHeight) {
+                    clearInterval(mermiHareket);
+                    mermi.remove();
+                }
+            }, 16);
+        }
+
+        function atesEtmeyiBaslat() {
+            if (!oyunDevam) return;
+            
+            if (atesInterval) clearInterval(atesInterval);
+            mermiOlustur();
+            atesInterval = setInterval(() => {
+                if (atesEdiyor && oyunDevam) {
+                    mermiOlustur();
+                }
+            }, 200);
+        }
+
+        function dusmanMermisiOlustur(dusmanX, dusmanY) {
+            if (!oyunDevam) return;
+
+            const dusmanMermisi = document.createElement('div');
+            dusmanMermisi.className = 'dusmanMermisi';
+            dusmanMermisi.style.left = (dusmanX + 20) + 'px';
+            dusmanMermisi.style.top = (dusmanY + 50) + 'px';
+            document.body.appendChild(dusmanMermisi);
+
+            let mermiY = dusmanY + 50;
+            const mermiHareket = setInterval(() => {
+                if (!oyunDevam) {
+                    clearInterval(mermiHareket);
+                    dusmanMermisi.remove();
+                    return;
+                }
+
+                mermiY += 3;
+                dusmanMermisi.style.top = mermiY + 'px';
+
+                const mermiRect = dusmanMermisi.getBoundingClientRect();
+                const kahramanRect = kahraman.getBoundingClientRect();
+                
+                if (carpismaKontrol(mermiRect, kahramanRect)) {
+                    kahramanCan--;
+                    canGuncelle();
+                    clearInterval(mermiHareket);
+                    dusmanMermisi.remove();
+                }
+
+                if (mermiY > window.innerHeight) {
+                    clearInterval(mermiHareket);
+                    dusmanMermisi.remove();
+                }
+            }, 16);
+        }
+
+        setInterval(() => {
+            if (!oyunDevam) return;
+            
+            const dusmanContainer = document.createElement('div');
+            dusmanContainer.className = 'dusmanContainer';
+            dusmanContainer.setAttribute('data-can', 3);
+            
+            const canBari = document.createElement('div');
+            canBari.className = 'canBari';
+            const canBariFill = document.createElement('div');
+            canBariFill.className = 'canBariFill';
+            canBari.appendChild(canBariFill);
+            
+            const dusman = document.createElement('div');
+            dusman.className = 'dusman';
+            
+            dusmanContainer.appendChild(canBari);
+            dusmanContainer.appendChild(dusman);
+            
+            const dusmanX = Math.random() * (window.innerWidth - 50);
+            dusmanContainer.style.left = dusmanX + 'px';
+            dusmanContainer.style.top = '-50px';
+            document.body.appendChild(dusmanContainer);
+
+            let dusmanY = -50;
+            dusmanContainer.hareketInterval = setInterval(() => {
+                if (!oyunDevam) {
+                    clearInterval(dusmanContainer.hareketInterval);
+                    dusmanContainer.remove();
+                    return;
+                }
+
+                dusmanY += 2;
+                dusmanContainer.style.top = dusmanY + 'px';
+                
+                if (Math.random() < 0.02) {
+                    dusmanMermisiOlustur(dusmanX, dusmanY);
+                }
+
+                if (dusmanY > window.innerHeight) {
+                    clearInterval(dusmanContainer.hareketInterval);
+                    dusmanContainer.remove();
+                }
+            }, 16);
+        }, 2000);
+    </script>
+</body>
+</html>
